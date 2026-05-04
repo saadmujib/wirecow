@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WireCow</title>
+  <style>
+:root {
+  --bg: #000000;
+  --panel: #050a05;
+  --neon: #00ff00;
+  --neon-dim: #006600;
+  --neon-mid: #00aa00;
+}
+
+body {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: var(--bg);
+  color: var(--neon);
+  margin: 0;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+h1, h3 {
+  color: var(--neon);
+  border-bottom: 1px solid var(--neon-dim);
+  padding-bottom: 5px;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+}
+
+.controls, .filter-row {
+  background: var(--panel);
+  padding: 15px;
+  border: 1px solid var(--neon-dim);
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+button {
+  background-color: var(--bg);
+  color: var(--neon);
+  border: 1px solid var(--neon-dim);
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: bold;
+  font-family: 'Courier New', Courier, monospace;
+  text-transform: uppercase;
+}
+
+button:hover {
+  background-color: var(--neon);
+  color: var(--bg);
+}
+
+#stopBtn {
+  border-color: var(--neon);
+}
+#stopBtn:hover {
+  background-color: var(--neon);
+  color: var(--bg);
+  box-shadow: 0 0 8px var(--neon);
+}
+
+#resetFilterBtn {
+  color: var(--neon-mid);
+  border-color: var(--neon-mid);
+}
+#resetFilterBtn:hover {
+  background-color: var(--neon-mid);
+  color: var(--bg);
+}
+
+input[type="text"], select {
+  background-color: var(--bg);
+  color: var(--neon);
+  padding: 6px 10px;
+  border: 1px solid var(--neon-dim);
+  font-size: 14px;
+  font-family: 'Courier New', Courier, monospace;
+  outline: none;
+}
+
+input[type="text"]:focus, select:focus {
+  border-color: var(--neon);
+}
+
+.status {
+  padding: 6px 12px;
+  border: 1px solid var(--neon-dim);
+  background: var(--bg);
+  font-size: 14px;
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+#tableWrap {
+  height: 400px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--neon-dim);
+  margin-bottom: 20px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background-color: var(--neon-dim);
+  color: var(--bg);
+  padding: 10px;
+  text-align: left;
+  font-size: 14px;
+  z-index: 1;
+  text-transform: uppercase;
+}
+
+td {
+  border-bottom: 1px solid var(--neon-dim);
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--neon-mid);
+}
+
+tbody tr:hover { background-color: var(--neon-dim); color: var(--bg); }
+tbody tr:hover td { color: var(--bg); }
+
+#stats {
+  background: var(--panel);
+  padding: 10px 15px;
+  border: 1px solid var(--neon-dim);
+  font-weight: bold;
+  color: var(--neon);
+  margin-bottom: 20px;
+  display: inline-block;
+}
+
+#logs {
+  background: var(--bg);
+  color: var(--neon-mid);
+  padding: 15px;
+  height: 150px;
+  overflow-y: auto;
+  border: 1px solid var(--neon-dim);
+  white-space: pre-wrap;
+  font-size: 13px;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); border-left: 1px solid var(--neon-dim); }
+::-webkit-scrollbar-thumb { background: var(--neon-dim); }
+::-webkit-scrollbar-thumb:hover { background: var(--neon); }
+  </style>
+</head>
+<body>
+  <h1>WireCow</h1>
+
+  <div class="controls">
+    <button id="startBtn">Start Monitoring</button>
+    <button id="stopBtn">Stop Monitoring</button>
+    <span class="status" id="status">Stopped</span>
+  </div>
+
+  <div class="filter-row">
+    <label>Protocol:
+      <select id="filterProto">
+        <option value="">All</option>
+        <option value="TCP">TCP</option>
+        <option value="UDP">UDP</option>
+        <option value="ICMP">ICMP</option>
+      </select>
+    </label>
+
+    <label>Source IP:
+      <input id="filterSrc" type="text">
+    </label>
+
+    <label>Source Port:
+      <input id="filterSrcPort" type="text">
+    </label>
+
+    <label>Destination IP:
+      <input id="filterDst" type="text" >
+    </label>
+
+    <label>Destination Port:
+      <input id="filterDstPort" type="text">
+    </label>
+
+    <label class="mode">Match:
+      <select id="matchMode">
+        <option value="prefix">Prefix</option>
+        <option value="exact">Exact</option>
+      </select>
+    </label>
+
+    <button id="applyFilterBtn">Filter</button>
+    <button id="resetFilterBtn">Reset</button>
+  </div>
+
+  <h3>Packets</h3>
+  <div id="tableWrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Source IP</th>
+          <th>Source Port</th>
+          <th>Destination IP</th>
+          <th>Destination Port</th>
+          <th>Protocol</th>
+          <th>Packet Size</th>
+          <th>Service</th>
+        </tr>
+      </thead>
+      <tbody id="packetTable"></tbody>
+    </table>
+  </div>
+
+  <h3>Statistics</h3>
+  <div id="stats">Total: 0 | Avg size: 0 B</div>
+
+  <h3>Logs</h3>
+  <div id="logs"></div>
+
+<script>
+let allPackets = [];
+let polling = null;
+let autoScroll = true; 
+const SCROLL_THRESHOLD = 20; 
+
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const applyFilterBtn = document.getElementById('applyFilterBtn');
+const resetFilterBtn = document.getElementById('resetFilterBtn');
+const statusEl = document.getElementById('status');
+const tableWrap = document.getElementById('tableWrap');
+
+startBtn.addEventListener('click', startMonitoring);
+stopBtn.addEventListener('click', stopMonitoring);
+applyFilterBtn.addEventListener('click', applyFilter);
+resetFilterBtn.addEventListener('click', resetFilter);
+
+["filterSrc","filterDst","filterSrcPort","filterDstPort"].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter") applyFilter(); });
+});
+
+tableWrap.addEventListener('scroll', () => {
+  const atBottom = isScrolledToBottom();
+  autoScroll = atBottom;
+});
+
+function isScrolledToBottom() {
+  const distance = tableWrap.scrollHeight - tableWrap.clientHeight - tableWrap.scrollTop;
+  return distance <= SCROLL_THRESHOLD;
+}
+
+function scrollToBottom() {
+  try {
+    tableWrap.scrollTop = tableWrap.scrollHeight;
+  } catch (e) {
+  }
+}
+
+function startMonitoring() {
+  fetch("/start", {method:"POST"})
+    .then(() => {
+      statusEl.textContent = "Capturing";
+      allPackets = [];
+      document.getElementById("packetTable").innerHTML = "";
+      if (polling) clearInterval(polling);
+      polling = setInterval(fetchData, 1000);
+      fetchData();
+    })
+    .catch(err => {
+      statusEl.textContent = "Stopped";
+      console.error(err);
+    });
+}
+
+function stopMonitoring() {
+  fetch("/stop", {method:"POST"})
+    .then(() => {
+      statusEl.textContent = "Stopped";
+      if (polling) clearInterval(polling);
+      polling = null;
+      fetchData();
+    })
+    .catch(err => {
+      console.error(err);
+    });
+}
+
+function fetchData() {
+  fetch("/packets").then(r => r.json()).then(data => {
+    allPackets = data.packets || [];
+    const src = document.getElementById("filterSrc").value.trim();
+    const dst = document.getElementById("filterDst").value.trim();
+    const srcPort = document.getElementById("filterSrcPort").value.trim();
+    const dstPort = document.getElementById("filterDstPort").value.trim();
+    const proto = document.getElementById("filterProto").value;
+    if (!src && !dst && !srcPort && !dstPort && !proto) {
+      renderTable(allPackets);
+    }
+  }).catch(console.error);
+
+  fetch("/stats").then(r => r.json()).then(data => {
+    const protoStr = Object.entries(data.proto_count || {}).map(([k,v]) => `${k}: ${v}`).join(" ");
+    document.getElementById("stats").textContent =
+      `Total: ${data.total} | Avg size: ${Number(data.avg_size).toFixed(1)} B | ${protoStr}`;
+  }).catch(console.error);
+
+  fetch("/logs").then(r => r.json()).then(data => {
+    document.getElementById("logs").textContent = (data.logs || []).join("\n");
+    const logsDiv = document.getElementById("logs");
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+  }).catch(console.error);
+}
+
+function renderTable(packets) {
+  const tbody = document.getElementById("packetTable");
+  const wasAtBottom = isScrolledToBottom();
+  tbody.innerHTML = "";
+  packets.forEach(p => {
+    const tr = document.createElement("tr");
+    const srcPort = (p["Source Port"] !== undefined && p["Source Port"] !== null) ? p["Source Port"] : "";
+    const dstPort = (p["Destination Port"] !== undefined && p["Destination Port"] !== null) ? p["Destination Port"] : "";
+    const service = p.Service !== undefined && p.Service !== null ? p.Service : "-";
+    tr.innerHTML = `<td>${p.Time}</td>
+      <td>${p["Source IP"]}</td>
+      <td>${srcPort}</td>
+      <td>${p["Destination IP"]}</td>
+      <td>${dstPort}</td>
+      <td>${p.Protocol}</td>
+      <td>${p["Packet Size"]}</td>
+      <td>${service}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  if (autoScroll || wasAtBottom) {
+    setTimeout(scrollToBottom, 0);
+  }
+}
+
+function applyFilter() {
+  const proto = document.getElementById("filterProto").value;
+  const src = document.getElementById("filterSrc").value.trim();
+  const dst = document.getElementById("filterDst").value.trim();
+  const srcPort = document.getElementById("filterSrcPort").value.trim();
+  const dstPort = document.getElementById("filterDstPort").value.trim();
+  const mode = document.getElementById("matchMode").value; 
+
+  const filtered = allPackets.filter(p => {
+    if (proto && p.Protocol !== proto) return false;
+
+    if (src) {
+      if (mode === "exact") {
+        if (p["Source IP"] !== src) return false;
+      } else { 
+        if (!p["Source IP"].startsWith(src)) return false;
+      }
+    }
+
+    if (dst) {
+      if (mode === "exact") {
+        if (p["Destination IP"] !== dst) return false;
+      } else { 
+        if (!p["Destination IP"].startsWith(dst)) return false;
+      }
+    }
+
+    if (srcPort) {
+      if (p["Source Port"] == null || String(p["Source Port"]) !== srcPort) return false;
+    }
+
+    if (dstPort) {
+      if (p["Destination Port"] == null || String(p["Destination Port"]) !== dstPort) return false;
+    }
+
+    return true;
+  });
+
+  renderTable(filtered);
+  if (autoScroll) setTimeout(scrollToBottom, 0);
+}
+
+function resetFilter() {
+  document.getElementById("filterProto").value = "";
+  document.getElementById("filterSrc").value = "";
+  document.getElementById("filterSrcPort").value = "";
+  document.getElementById("filterDst").value = "";
+  document.getElementById("filterDstPort").value = "";
+  document.getElementById("matchMode").value = "prefix";
+  renderTable(allPackets);
+  if (autoScroll) setTimeout(scrollToBottom, 0);
+}
+
+fetchData();
+</script>
+</body>
+</html>
